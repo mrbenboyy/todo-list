@@ -6,72 +6,112 @@ A pixelated task manager with Pokemon-style graphics where you can create catego
 
 - **Categories/Goals**: Create different categories to organize your tasks
 - **Task Management**: Add tasks to each category and mark them as done
-- **Pokemon-Style UI**: Pixelated graphics with Pokemon-inspired colors
+- **Edit Functionality**: Edit category and task names with the "E" button
+- **Pokemon-Style UI**: Authentic pixelated graphics with Pokemon-inspired colors
+- **Pokemon Characters**: Pikachu mascot and Pokeball icons throughout
 - **MongoDB Database**: All data is stored locally in MongoDB
 - **Checkbox System**: Click anywhere on a task card or checkbox to toggle completion
 - **Delete Options**: Remove categories or individual tasks with X buttons
 - **Task Progress**: See completion status (e.g., "3/5 tasks") for each category
 
-## Prerequisites 📋
+## Quick Start - Run the EXE 🚀
 
-1. **Python 3.7+** installed on your system
-2. **MongoDB** running locally at `mongodb://localhost:27017/`
+### For End Users (Just Run It!)
 
-### Installing MongoDB
+1. **Download** or build `PokemonTodo.exe`
+2. **Make sure MongoDB is running** (see MongoDB setup below)
+3. **Double-click** `PokemonTodo.exe`
+4. That's it! Start organizing your tasks!
+
+**Note:** You can move the .exe file anywhere (Desktop, Programs folder, etc.) and it will work!
+
+---
+
+## Building Your Own EXE 📦
+
+### Easy Method (Recommended)
+
+1. **Double-click** `build_exe.bat` in the project folder
+2. Wait for the build to complete
+3. Find your executable in the `dist` folder
+4. Copy `PokemonTodo.exe` anywhere you want!
+
+### Manual Method
+
+```bash
+# Install PyInstaller
+pip install pyinstaller
+
+# Build the executable
+pyinstaller PokemonTodo.spec
+
+# Or use the full command:
+pyinstaller --onefile --windowed --name="PokemonTodo" --add-data="PressStart2P-Regular.ttf;." --add-data="sprites;sprites" --noconsole main.py
+```
+
+Your executable will be in the `dist/` folder!
+
+---
+
+## MongoDB Setup 💾
+
+The app requires MongoDB to store your todos. You only need to install it once!
+
+### Install MongoDB (One-time setup)
 
 **Windows:**
-1. Download from [MongoDB Community Edition](https://www.mongodb.com/try/download/community)
-2. Install and run MongoDB as a service
-3. Or run manually: `mongod --dbpath C:\data\db`
+1. Download [MongoDB Community Edition](https://www.mongodb.com/try/download/community)
+2. Run the installer (check "Install as Windows Service")
+3. MongoDB will start automatically on boot!
 
-## Installation 🚀
+**Alternative - MongoDB Compass:**
+- If you installed MongoDB Compass, just open it
+- MongoDB will start automatically
 
-1. Install Python dependencies:
+### Check if MongoDB is Running
+
+Open Command Prompt and run:
+```bash
+mongosh
+```
+If you see a MongoDB shell, you're good to go!
+
+### Start MongoDB Manually (if needed)
+
+```bash
+# Windows (if not running as service)
+net start MongoDB
+
+# Or run manually
+mongod --dbpath C:\data\db
+```
+
+---
+
+## For Developers 👨‍💻
+
+### Prerequisites
+
+1. **Python 3.7+** installed
+2. **MongoDB** running locally at `mongodb://localhost:27017/`
+
+### Installation
+
+1. Clone or download this repository
+
+2. Install Python dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Make sure MongoDB is running:
-```bash
-# Check if MongoDB is running
-mongo --eval "db.version()"
-```
+3. Make sure MongoDB is running
 
-## Running the App 🎯
-
-Simply run:
+4. Run the app:
 ```bash
 python main.py
 ```
 
-The app will:
-- Connect to MongoDB at `mongodb://localhost:27017/`
-- Create a database called `pokemon_todo`
-- Open a window with the Pokemon-style interface
-
-## Creating an EXE File 📦
-
-To create a standalone .exe file:
-
-1. Install PyInstaller:
-```bash
-pip install pyinstaller
-```
-
-2. Create the executable:
-```bash
-pyinstaller --onefile --windowed --name="PokemonTodo" main.py
-```
-
-3. Find your .exe in the `dist` folder!
-
-**Note:** When distributing the .exe, users still need MongoDB running locally.
-
-### Alternative: Include Everything
-To create an exe with a custom icon (optional):
-```bash
-pyinstaller --onefile --windowed --name="PokemonTodo" --icon=app_icon.ico main.py
-```
+---
 
 ## How to Use 🎮
 
