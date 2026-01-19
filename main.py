@@ -286,7 +286,7 @@ class TodoApp:
         # Scrolling
         self.category_scroll = 0
         self.task_scroll = 0
-        self.items_per_page = 6
+        self.items_per_page = 5
 
         # Input boxes
         self.category_input = InputBox(150, 510, 400, 50, 'New Goal...')
