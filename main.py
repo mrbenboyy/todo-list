@@ -182,7 +182,7 @@ class TodoApp:
     """Main application class"""
     def __init__(self):
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        pygame.display.set_caption("Hakim Todo List")
+        pygame.display.set_caption("Pokemon Todo List")
         self.clock = pygame.time.Clock()
         
         # Load pixel font
@@ -197,10 +197,24 @@ class TodoApp:
             self.font = pygame.font.Font(None, 24)
             self.small_font = pygame.font.Font(None, 18)
         
+        # Load Pokemon sprites
+        try:
+            self.pikachu_sprite = pygame.image.load('sprites/pikachu.png')
+            self.pokeball_sprite = pygame.image.load('sprites/pokeball.png')
+            self.badge_sprite = pygame.image.load('sprites/badge.png')
+            print("✓ Loaded Pokemon sprites!")
+        except:
+            print("⚠ Could not load sprites, continuing without...")
+            self.pikachu_sprite = None
+            self.pokeball_sprite = None
+            self.badge_sprite = None
+        
         # App state
         self.current_view = 'categories'  # 'categories' or 'tasks'
         self.selected_category_id = None
         self.selected_category_name = ''
+        self.editing_item = None  # For edit mode: {'type': 'category'/'task', 'id': ...}
+        self.edit_input = InputBox(150, 300, 500, 50, '')
         
         # Input boxes
         self.category_input = InputBox(150, 510, 400, 50, 'New Goal...')
@@ -233,6 +247,17 @@ class TodoApp:
             }
             categories_collection.insert_one(category)
             self.load_categories()
+    
+    def update_category(self, category_id, new_name):
+        """Update a category name"""
+        if new_name.strip():
+            categories_collection.update_one(
+                {'_id': category_id},
+                {'$set': {'name': new_name}}
+            )
+            self.load_categories()
+            if self.selected_category_id == category_id:
+                self.selected_category_name = new_name
             
     def add_task(self, category_id, name):
         """Add a new task to a category"""
@@ -245,6 +270,15 @@ class TodoApp:
             }
             tasks_collection.insert_one(task)
             self.load_tasks(category_id)
+    
+    def update_task(self, task_id, new_name):
+        """Update a task name"""
+        if new_name.strip():
+            tasks_collection.update_one(
+                {'_id': task_id},
+                {'$set': {'name': new_name}}
+            )
+            self.load_tasks(self.selected_category_id)
             
     def toggle_task(self, task_id):
         """Toggle task completion status"""
@@ -270,6 +304,10 @@ class TodoApp:
         
     def draw_categories_view(self):
         """Draw the categories view"""
+        # Pikachu sprite in corner
+        if self.pikachu_sprite:
+            self.screen.blit(self.pikachu_sprite, (10, 540))
+        
         # Title box with retro style
         title_box_rect = pygame.Rect(50, 20, 700, 100)
         PixelBox.draw(self.screen, title_box_rect, ACCENT_COLOR, 6)
@@ -292,17 +330,25 @@ class TodoApp:
             
             # Check hover
             mouse_pos = pygame.mouse.get_pos()
+            edit_btn_rect = pygame.Rect(card_rect.right - 105, card_rect.y + 10, 45, 35)
             delete_btn_rect = pygame.Rect(card_rect.right - 55, card_rect.y + 10, 45, 35)
-            is_hovered = card_rect.collidepoint(mouse_pos) and not delete_btn_rect.collidepoint(mouse_pos)
+            is_hovered = card_rect.collidepoint(mouse_pos) and not delete_btn_rect.collidepoint(mouse_pos) and not edit_btn_rect.collidepoint(mouse_pos)
             
             # Draw card with pixel box
             card_color = (255, 255, 200) if is_hovered else WHITE_COLOR
             PixelBox.draw(self.screen, card_rect, card_color, 4)
             
+            # Pokeball icon
+            if self.pokeball_sprite:
+                self.screen.blit(self.pokeball_sprite, (card_rect.x + 10, card_rect.y + 12))
+                text_x = card_rect.x + 50
+            else:
+                text_x = card_rect.x + 15
+            
             # Category name (truncate if too long)
-            name_text = category['name'][:25]
+            name_text = category['name'][:20]
             text = self.font.render(name_text, False, TEXT_COLOR)
-            self.screen.blit(text, (card_rect.x + 15, card_rect.y + 18))
+            self.screen.blit(text, (text_x, card_rect.y + 18))
             
             # Task count with pixelated badge
             task_count = tasks_collection.count_documents({'category_id': category['_id']})
@@ -311,8 +357,8 @@ class TodoApp:
                 'completed': True
             })
             
-            # Progress badge
-            badge_rect = pygame.Rect(card_rect.x + 420, card_rect.y + 12, 120, 30)
+            # Progress badge with badge sprite
+            badge_rect = pygame.Rect(card_rect.x + 370, card_rect.y + 12, 100, 30)
             badge_color = GREEN_COLOR if completed_count == task_count and task_count > 0 else BLUE_COLOR
             pygame.draw.rect(self.screen, badge_color, badge_rect)
             pygame.draw.rect(self.screen, BORDER_COLOR, badge_rect, 3)
@@ -324,6 +370,13 @@ class TodoApp:
             )
             count_rect = count_text.get_rect(center=badge_rect.center)
             self.screen.blit(count_text, count_rect)
+            
+            # Edit button
+            pygame.draw.rect(self.screen, BLUE_COLOR, edit_btn_rect)
+            pygame.draw.rect(self.screen, BORDER_COLOR, edit_btn_rect, 3)
+            edit_text = self.small_font.render('E', False, WHITE_COLOR)
+            edit_text_rect = edit_text.get_rect(center=edit_btn_rect.center)
+            self.screen.blit(edit_text, edit_text_rect)
             
             # Delete button with X
             pygame.draw.rect(self.screen, RED_COLOR, delete_btn_rect)
@@ -342,6 +395,10 @@ class TodoApp:
         """Draw the tasks view for a specific category"""
         # Back button
         self.back_button.draw(self.screen, self.small_font)
+        
+        # Pikachu sprite in corner
+        if self.pikachu_sprite:
+            self.screen.blit(self.pikachu_sprite, (10, 540))
         
         # Title box with retro style
         title_box_rect = pygame.Rect(180, 20, 440, 100)
@@ -366,8 +423,9 @@ class TodoApp:
             
             # Check hover
             mouse_pos = pygame.mouse.get_pos()
+            edit_btn_rect = pygame.Rect(card_rect.right - 105, card_rect.y + 10, 45, 35)
             delete_btn_rect = pygame.Rect(card_rect.right - 55, card_rect.y + 10, 45, 35)
-            is_hovered = card_rect.collidepoint(mouse_pos) and not delete_btn_rect.collidepoint(mouse_pos)
+            is_hovered = card_rect.collidepoint(mouse_pos) and not delete_btn_rect.collidepoint(mouse_pos) and not edit_btn_rect.collidepoint(mouse_pos)
             
             # Draw card with pixel box
             if task['completed']:
@@ -393,10 +451,17 @@ class TodoApp:
                                (checkbox_rect.x + 22, checkbox_rect.y + 6), 5)
             
             # Task name (truncate if too long)
-            task_name = task['name'][:30]
+            task_name = task['name'][:25]
             text_color = (100, 100, 100) if task['completed'] else TEXT_COLOR
             name_text = self.font.render(task_name, False, text_color)
             self.screen.blit(name_text, (card_rect.x + 60, card_rect.y + 18))
+            
+            # Edit button
+            pygame.draw.rect(self.screen, BLUE_COLOR, edit_btn_rect)
+            pygame.draw.rect(self.screen, BORDER_COLOR, edit_btn_rect, 3)
+            edit_text = self.small_font.render('E', False, WHITE_COLOR)
+            edit_text_rect = edit_text.get_rect(center=edit_btn_rect.center)
+            self.screen.blit(edit_text, edit_text_rect)
             
             # Delete button
             pygame.draw.rect(self.screen, RED_COLOR, delete_btn_rect)
@@ -425,7 +490,14 @@ class TodoApp:
         y_offset = 140
         for i, category in enumerate(self.categories[:6]):
             card_rect = pygame.Rect(80, y_offset, 640, 55)
+            edit_btn_rect = pygame.Rect(card_rect.right - 105, card_rect.y + 10, 45, 35)
             delete_btn_rect = pygame.Rect(card_rect.right - 55, card_rect.y + 10, 45, 35)
+            
+            if edit_btn_rect.collidepoint(pos):
+                # Start editing this category
+                self.editing_item = {'type': 'category', 'id': category['_id'], 'name': category['name']}
+                self.edit_input.text = category['name']
+                return
             
             if delete_btn_rect.collidepoint(pos):
                 self.delete_category(category['_id'])
@@ -462,7 +534,14 @@ class TodoApp:
         for i, task in enumerate(self.tasks[:6]):
             card_rect = pygame.Rect(80, y_offset, 640, 55)
             checkbox_rect = pygame.Rect(card_rect.x + 15, card_rect.y + 15, 28, 28)
+            edit_btn_rect = pygame.Rect(card_rect.right - 105, card_rect.y + 10, 45, 35)
             delete_btn_rect = pygame.Rect(card_rect.right - 55, card_rect.y + 10, 45, 35)
+            
+            if edit_btn_rect.collidepoint(pos):
+                # Start editing this task
+                self.editing_item = {'type': 'task', 'id': task['_id'], 'name': task['name']}
+                self.edit_input.text = task['name']
+                return
             
             if delete_btn_rect.collidepoint(pos):
                 self.delete_task(task['_id'])
@@ -483,6 +562,26 @@ class TodoApp:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
+                
+                # Handle edit mode
+                if self.editing_item:
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        # Cancel edit if clicked outside
+                        if not self.edit_input.rect.collidepoint(event.pos):
+                            self.editing_item = None
+                    
+                    # Handle edit input
+                    if self.edit_input.handle_event(event):
+                        # Enter pressed - save edit
+                        new_name = self.edit_input.get_text()
+                        if new_name.strip():
+                            if self.editing_item['type'] == 'category':
+                                self.update_category(self.editing_item['id'], new_name)
+                            else:
+                                self.update_task(self.editing_item['id'], new_name)
+                        self.editing_item = None
+                        self.edit_input.clear()
+                    continue
                     
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if self.current_view == 'categories':
@@ -490,22 +589,26 @@ class TodoApp:
                     else:
                         self.handle_tasks_click(event.pos)
                         
-                # Handle input boxes
+                # Handle input boxes - properly check for Enter key
                 if self.current_view == 'categories':
                     if self.category_input.handle_event(event):
+                        # Enter was pressed
                         text = self.category_input.get_text()
                         if text.strip():
                             self.add_category(text)
                             self.category_input.clear()
                 else:
                     if self.task_input.handle_event(event):
+                        # Enter was pressed
                         text = self.task_input.get_text()
                         if text.strip():
                             self.add_task(self.selected_category_id, text)
                             self.task_input.clear()
             
             # Update input boxes for cursor animation
-            if self.current_view == 'categories':
+            if self.editing_item:
+                self.edit_input.update()
+            elif self.current_view == 'categories':
                 self.category_input.update()
             else:
                 self.task_input.update()
@@ -523,6 +626,32 @@ class TodoApp:
                 self.draw_categories_view()
             else:
                 self.draw_tasks_view()
+            
+            # Draw edit dialog if editing
+            if self.editing_item:
+                # Dim background
+                overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+                overlay.set_alpha(128)
+                overlay.fill((0, 0, 0))
+                self.screen.blit(overlay, (0, 0))
+                
+                # Edit dialog box
+                dialog_rect = pygame.Rect(150, 250, 500, 150)
+                PixelBox.draw(self.screen, dialog_rect, WHITE_COLOR, 6)
+                
+                # Title
+                title_text = 'EDIT ' + self.editing_item['type'].upper()
+                title = self.font.render(title_text, False, TEXT_COLOR)
+                title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 280))
+                self.screen.blit(title, title_rect)
+                
+                # Input box
+                self.edit_input.draw(self.screen, self.small_font)
+                
+                # Instructions
+                hint = self.small_font.render('PRESS ENTER TO SAVE', False, (100, 100, 100))
+                hint_rect = hint.get_rect(center=(SCREEN_WIDTH // 2, 370))
+                self.screen.blit(hint, hint_rect)
                 
             pygame.display.flip()
             self.clock.tick(FPS)
