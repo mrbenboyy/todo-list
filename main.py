@@ -280,6 +280,8 @@ class TodoApp:
         # For edit mode: {'type': 'category'/'task', 'id': ...}
         self.editing_item = None
         self.edit_input = InputBox(150, 300, 500, 50, '')
+        # For confirmation mode: {'action': 'delete_category'/'delete_task'/'edit_category'/'edit_task'/'toggle_task', 'data': ...}
+        self.confirming_action = None
 
         # Scrolling
         self.category_scroll = 0
@@ -641,19 +643,19 @@ class TodoApp:
                 card_rect.right - 55, card_rect.y + 10, 45, 35)
 
             if edit_btn_rect.collidepoint(pos):
-                # Start editing this category
-                self.editing_item = {
-                    'type': 'category', 'id': category['_id'], 'name': category['name']}
-                self.edit_input.text = category['name']
-                self.edit_input.cursor_position = len(category['name'])
+                # Show confirmation for editing
+                self.confirming_action = {
+                    'action': 'edit_category',
+                    'data': {'id': category['_id'], 'name': category['name']}
+                }
                 return
 
             if delete_btn_rect.collidepoint(pos):
-                self.delete_category(category['_id'])
-                # Adjust scroll if needed
-                if self.category_scroll >= len(self.categories):
-                    self.category_scroll = max(
-                        0, len(self.categories) - self.items_per_page)
+                # Show confirmation for deleting
+                self.confirming_action = {
+                    'action': 'delete_category',
+                    'data': {'id': category['_id'], 'name': category['name']}
+                }
                 return
 
             if card_rect.collidepoint(pos):
@@ -700,23 +702,27 @@ class TodoApp:
                 card_rect.right - 55, card_rect.y + 10, 45, 35)
 
             if edit_btn_rect.collidepoint(pos):
-                # Start editing this task
-                self.editing_item = {'type': 'task',
-                                     'id': task['_id'], 'name': task['name']}
-                self.edit_input.text = task['name']
-                self.edit_input.cursor_position = len(task['name'])
+                # Show confirmation for editing
+                self.confirming_action = {
+                    'action': 'edit_task',
+                    'data': {'id': task['_id'], 'name': task['name']}
+                }
                 return
 
             if delete_btn_rect.collidepoint(pos):
-                self.delete_task(task['_id'])
-                # Adjust scroll if needed
-                if self.task_scroll >= len(self.tasks):
-                    self.task_scroll = max(
-                        0, len(self.tasks) - self.items_per_page)
+                # Show confirmation for deleting
+                self.confirming_action = {
+                    'action': 'delete_task',
+                    'data': {'id': task['_id'], 'name': task['name']}
+                }
                 return
 
             if checkbox_rect.collidepoint(pos) or card_rect.collidepoint(pos):
-                self.toggle_task(task['_id'])
+                # Show confirmation for toggling completion
+                self.confirming_action = {
+                    'action': 'toggle_task',
+                    'data': {'id': task['_id'], 'name': task['name'], 'completed': task['completed']}
+                }
                 return
 
             y_offset += 65
@@ -732,7 +738,7 @@ class TodoApp:
                     running = False
 
                 # Handle mouse wheel scrolling
-                if event.type == pygame.MOUSEWHEEL and not self.editing_item:
+                if event.type == pygame.MOUSEWHEEL and not self.editing_item and not self.confirming_action:
                     if self.current_view == 'categories':
                         max_scroll = max(
                             0, len(self.categories) - self.items_per_page)
@@ -743,6 +749,54 @@ class TodoApp:
                                          self.items_per_page)
                         self.task_scroll = max(
                             0, min(max_scroll, self.task_scroll - event.y))
+
+                # Handle confirmation mode
+                if self.confirming_action:
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        # Yes button
+                        yes_btn_rect = pygame.Rect(250, 340, 120, 50)
+                        # No button
+                        no_btn_rect = pygame.Rect(430, 340, 120, 50)
+
+                        if yes_btn_rect.collidepoint(event.pos):
+                            # Execute the action
+                            action = self.confirming_action['action']
+                            data = self.confirming_action['data']
+
+                            if action == 'delete_category':
+                                self.delete_category(data['id'])
+                                # Adjust scroll if needed
+                                if self.category_scroll >= len(self.categories):
+                                    self.category_scroll = max(
+                                        0, len(self.categories) - self.items_per_page)
+                            elif action == 'delete_task':
+                                self.delete_task(data['id'])
+                                # Adjust scroll if needed
+                                if self.task_scroll >= len(self.tasks):
+                                    self.task_scroll = max(
+                                        0, len(self.tasks) - self.items_per_page)
+                            elif action == 'edit_category':
+                                # Start editing
+                                self.editing_item = {
+                                    'type': 'category', 'id': data['id'], 'name': data['name']}
+                                self.edit_input.text = data['name']
+                                self.edit_input.cursor_position = len(
+                                    data['name'])
+                            elif action == 'edit_task':
+                                # Start editing
+                                self.editing_item = {
+                                    'type': 'task', 'id': data['id'], 'name': data['name']}
+                                self.edit_input.text = data['name']
+                                self.edit_input.cursor_position = len(
+                                    data['name'])
+                            elif action == 'toggle_task':
+                                self.toggle_task(data['id'])
+
+                            self.confirming_action = None
+                        elif no_btn_rect.collidepoint(event.pos) or not pygame.Rect(200, 230, 400, 180).collidepoint(event.pos):
+                            # Cancel action
+                            self.confirming_action = None
+                    continue
 
                 # Handle edit mode
                 if self.editing_item:
@@ -810,8 +864,66 @@ class TodoApp:
             else:
                 self.draw_tasks_view()
 
+            # Draw confirmation dialog if confirming
+            if self.confirming_action:
+                # Dim background
+                overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+                overlay.set_alpha(128)
+                overlay.fill((0, 0, 0))
+                self.screen.blit(overlay, (0, 0))
+
+                # Confirmation dialog box
+                dialog_rect = pygame.Rect(200, 230, 400, 180)
+                PixelBox.draw(self.screen, dialog_rect, WHITE_COLOR, 6)
+
+                # Title and message based on action
+                action = self.confirming_action['action']
+                data = self.confirming_action['data']
+
+                if action == 'delete_category':
+                    title_text = 'DELETE GOAL?'
+                    msg_text = 'ALL TASKS WILL BE LOST'
+                elif action == 'delete_task':
+                    title_text = 'DELETE TASK?'
+                    msg_text = 'THIS CANNOT BE UNDONE'
+                elif action == 'edit_category':
+                    title_text = 'EDIT GOAL?'
+                    msg_text = 'CHANGE GOAL NAME'
+                elif action == 'edit_task':
+                    title_text = 'EDIT TASK?'
+                    msg_text = 'CHANGE TASK NAME'
+                elif action == 'toggle_task':
+                    if data['completed']:
+                        title_text = 'MARK INCOMPLETE?'
+                        msg_text = 'UNDO COMPLETION'
+                    else:
+                        title_text = 'MARK COMPLETE?'
+                        msg_text = 'FINISH THIS TASK'
+
+                # Draw title
+                title = self.font.render(title_text, False, TEXT_COLOR)
+                title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 260))
+                self.screen.blit(title, title_rect)
+
+                # Draw message
+                msg = self.small_font.render(msg_text, False, (100, 100, 100))
+                msg_rect = msg.get_rect(center=(SCREEN_WIDTH // 2, 300))
+                self.screen.blit(msg, msg_rect)
+
+                # Yes button
+                yes_btn = Button(250, 340, 120, 50, 'YES',
+                                 GREEN_COLOR, WHITE_COLOR)
+                yes_btn.check_hover(pygame.mouse.get_pos())
+                yes_btn.draw(self.screen, self.small_font)
+
+                # No button
+                no_btn = Button(430, 340, 120, 50, 'NO',
+                                RED_COLOR, WHITE_COLOR)
+                no_btn.check_hover(pygame.mouse.get_pos())
+                no_btn.draw(self.screen, self.small_font)
+
             # Draw edit dialog if editing
-            if self.editing_item:
+            elif self.editing_item:
                 # Dim background
                 overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
                 overlay.set_alpha(128)
