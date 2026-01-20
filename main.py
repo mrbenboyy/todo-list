@@ -261,14 +261,30 @@ class TodoApp:
             self.font = pygame.font.Font(None, 24)
             self.small_font = pygame.font.Font(None, 18)
 
+        # Get base directory for resource loading
+        base_dir = os.path.dirname(__file__)
+        
+        # Set window icon
+        try:
+            icon_path = os.path.join(base_dir, 'sprites', 'logo.png')
+            icon = pygame.image.load(icon_path)
+            pygame.display.set_icon(icon)
+            print("✓ Loaded window icon!")
+        except Exception as e:
+            print(f"⚠ Could not load icon: {e}")
+
         # Load Pokemon sprites
         try:
-            self.pikachu_sprite = pygame.image.load('sprites/pikachu.png')
-            self.pokeball_sprite = pygame.image.load('sprites/pokeball.png')
-            self.badge_sprite = pygame.image.load('sprites/badge.png')
+            pikachu_path = os.path.join(base_dir, 'sprites', 'pikachu.png')
+            pokeball_path = os.path.join(base_dir, 'sprites', 'pokeball.png')
+            badge_path = os.path.join(base_dir, 'sprites', 'badge.png')
+            
+            self.pikachu_sprite = pygame.image.load(pikachu_path)
+            self.pokeball_sprite = pygame.image.load(pokeball_path)
+            self.badge_sprite = pygame.image.load(badge_path)
             print("✓ Loaded Pokemon sprites!")
-        except:
-            print("⚠ Could not load sprites, continuing without...")
+        except Exception as e:
+            print(f"⚠ Could not load sprites: {e}")
             self.pikachu_sprite = None
             self.pokeball_sprite = None
             self.badge_sprite = None
@@ -401,6 +417,26 @@ class TodoApp:
         subtitle_rect = subtitle.get_rect(center=(SCREEN_WIDTH // 2, 90))
         self.screen.blit(subtitle, subtitle_rect)
 
+        # Draw scrollbar if there are more items than can fit
+        if total_categories > self.items_per_page:
+            scrollbar_x = 748
+            scrollbar_y = 155
+            scrollbar_width = 10
+            scrollbar_height = 315  # Total scrollable area height
+            
+            # Scrollbar track
+            track_rect = pygame.Rect(scrollbar_x, scrollbar_y, scrollbar_width, scrollbar_height)
+            pygame.draw.rect(self.screen, SHADOW_COLOR, track_rect)
+            pygame.draw.rect(self.screen, BORDER_COLOR, track_rect, 2)
+            
+            # Scrollbar thumb
+            thumb_height = max(30, int(scrollbar_height * self.items_per_page / total_categories))
+            max_scroll = total_categories - self.items_per_page
+            thumb_y = scrollbar_y + int((scrollbar_height - thumb_height) * (self.category_scroll / max_scroll)) if max_scroll > 0 else scrollbar_y
+            thumb_rect = pygame.Rect(scrollbar_x, thumb_y, scrollbar_width, thumb_height)
+            pygame.draw.rect(self.screen, BLUE_COLOR, thumb_rect)
+            pygame.draw.rect(self.screen, BORDER_COLOR, thumb_rect, 2)
+
         # Scroll indicators
         if self.category_scroll > 0:
             # Up arrow
@@ -527,6 +563,26 @@ class TodoApp:
         subtitle = self.small_font.render(subtitle_text, False, WHITE_COLOR)
         subtitle_rect = subtitle.get_rect(center=(SCREEN_WIDTH // 2, 90))
         self.screen.blit(subtitle, subtitle_rect)
+
+        # Draw scrollbar if there are more items than can fit
+        if total_tasks > self.items_per_page:
+            scrollbar_x = 748
+            scrollbar_y = 155
+            scrollbar_width = 10
+            scrollbar_height = 315  # Total scrollable area height
+            
+            # Scrollbar track
+            track_rect = pygame.Rect(scrollbar_x, scrollbar_y, scrollbar_width, scrollbar_height)
+            pygame.draw.rect(self.screen, SHADOW_COLOR, track_rect)
+            pygame.draw.rect(self.screen, BORDER_COLOR, track_rect, 2)
+            
+            # Scrollbar thumb
+            thumb_height = max(30, int(scrollbar_height * self.items_per_page / total_tasks))
+            max_scroll = total_tasks - self.items_per_page
+            thumb_y = scrollbar_y + int((scrollbar_height - thumb_height) * (self.task_scroll / max_scroll)) if max_scroll > 0 else scrollbar_y
+            thumb_rect = pygame.Rect(scrollbar_x, thumb_y, scrollbar_width, thumb_height)
+            pygame.draw.rect(self.screen, BLUE_COLOR, thumb_rect)
+            pygame.draw.rect(self.screen, BORDER_COLOR, thumb_rect, 2)
 
         # Scroll indicators
         if self.task_scroll > 0:
@@ -717,12 +773,9 @@ class TodoApp:
                 }
                 return
 
-            if checkbox_rect.collidepoint(pos) or card_rect.collidepoint(pos):
-                # Show confirmation for toggling completion
-                self.confirming_action = {
-                    'action': 'toggle_task',
-                    'data': {'id': task['_id'], 'name': task['name'], 'completed': task['completed']}
-                }
+            if checkbox_rect.collidepoint(pos):
+                # Toggle task directly without confirmation when clicking checkbox
+                self.toggle_task(task['_id'])
                 return
 
             y_offset += 65
