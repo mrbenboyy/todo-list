@@ -304,6 +304,9 @@ class TodoApp:
         self.task_scroll = 0
         self.items_per_page = 5
 
+        # Filter state
+        self.show_only_undone = False
+
         # Input boxes
         self.category_input = InputBox(150, 510, 400, 50, 'New Goal...')
         self.task_input = InputBox(150, 510, 400, 50, 'New Task...')
@@ -557,8 +560,34 @@ class TodoApp:
         title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 50))
         self.screen.blit(title, title_rect)
 
+        # Filter checkbox and label
+        filter_checkbox_rect = pygame.Rect(200, 130, 24, 24)
+        pygame.draw.rect(self.screen, WHITE_COLOR, filter_checkbox_rect)
+        pygame.draw.rect(self.screen, BORDER_COLOR, filter_checkbox_rect, 3)
+        
+        # Draw checkmark if filter is active
+        if self.show_only_undone:
+            pygame.draw.line(self.screen, BLUE_COLOR,
+                             (filter_checkbox_rect.x + 4, filter_checkbox_rect.y + 12),
+                             (filter_checkbox_rect.x + 9, filter_checkbox_rect.y + 18), 4)
+            pygame.draw.line(self.screen, BLUE_COLOR,
+                             (filter_checkbox_rect.x + 9, filter_checkbox_rect.y + 18),
+                             (filter_checkbox_rect.x + 20, filter_checkbox_rect.y + 4), 4)
+        
+        # Filter label (centered vertically with checkbox)
+        filter_label = self.small_font.render('Show only undone', False, TEXT_COLOR)
+        label_y = filter_checkbox_rect.centery - filter_label.get_height() // 2
+        self.screen.blit(filter_label, (235, label_y))
+
+        # Get filtered tasks
+        if self.show_only_undone:
+            filtered_tasks = [task for task in self.tasks if not task['completed']]
+        else:
+            filtered_tasks = self.tasks
+        
+        total_tasks = len(filtered_tasks)
+        
         # Subtitle with count
-        total_tasks = len(self.tasks)
         subtitle_text = f'TASKS ({total_tasks})'
         subtitle = self.small_font.render(subtitle_text, False, WHITE_COLOR)
         subtitle_rect = subtitle.get_rect(center=(SCREEN_WIDTH // 2, 90))
@@ -596,12 +625,12 @@ class TodoApp:
             self.screen.blit(down_text, (750, 485))
 
         # Draw tasks with scrolling
-        y_offset = 140
+        y_offset = 160
         start_idx = self.task_scroll
         end_idx = min(start_idx + self.items_per_page, total_tasks)
 
         for i in range(start_idx, end_idx):
-            task = self.tasks[i]
+            task = filtered_tasks[i]
             # Task card
             card_rect = pygame.Rect(80, y_offset, 640, 55)
 
@@ -732,6 +761,14 @@ class TodoApp:
             self.selected_category_id = None
             self.task_input.clear()
             self.category_scroll = 0  # Reset category scroll
+            self.show_only_undone = False  # Reset filter
+            return
+
+        # Check filter checkbox
+        filter_checkbox_rect = pygame.Rect(200, 130, 24, 24)
+        if filter_checkbox_rect.collidepoint(pos):
+            self.show_only_undone = not self.show_only_undone
+            self.task_scroll = 0  # Reset scroll when filter changes
             return
 
         # Check add button
@@ -742,13 +779,19 @@ class TodoApp:
                 self.task_input.clear()
             return
 
+        # Get filtered tasks for click detection
+        if self.show_only_undone:
+            filtered_tasks = [task for task in self.tasks if not task['completed']]
+        else:
+            filtered_tasks = self.tasks
+
         # Check task cards with scroll offset
-        y_offset = 140
+        y_offset = 160
         start_idx = self.task_scroll
-        end_idx = min(start_idx + self.items_per_page, len(self.tasks))
+        end_idx = min(start_idx + self.items_per_page, len(filtered_tasks))
 
         for i in range(start_idx, end_idx):
-            task = self.tasks[i]
+            task = filtered_tasks[i]
             card_rect = pygame.Rect(80, y_offset, 640, 55)
             checkbox_rect = pygame.Rect(
                 card_rect.x + 15, card_rect.y + 15, 28, 28)
@@ -798,8 +841,12 @@ class TodoApp:
                         self.category_scroll = max(
                             0, min(max_scroll, self.category_scroll - event.y))
                     else:
-                        max_scroll = max(0, len(self.tasks) -
-                                         self.items_per_page)
+                        # Get filtered task count for scrolling
+                        if self.show_only_undone:
+                            filtered_task_count = len([task for task in self.tasks if not task['completed']])
+                        else:
+                            filtered_task_count = len(self.tasks)
+                        max_scroll = max(0, filtered_task_count - self.items_per_page)
                         self.task_scroll = max(
                             0, min(max_scroll, self.task_scroll - event.y))
 
