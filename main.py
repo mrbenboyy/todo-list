@@ -5,6 +5,7 @@ A pixelated task manager with categories and tasks
 import pygame
 import sys
 import os
+import math
 from pymongo import MongoClient
 from datetime import datetime
 
@@ -307,6 +308,11 @@ class TodoApp:
         # Filter state
         self.show_only_undone = False
 
+        # New task pulse effect
+        self.new_task_id = None
+        self.new_task_start_time = 0
+        self.new_task_pulse_duration = 2000  # 2 seconds in milliseconds
+
         # Input boxes
         self.category_input = InputBox(150, 510, 400, 50, 'New Goal...')
         self.task_input = InputBox(150, 510, 400, 50, 'New Task...')
@@ -332,7 +338,7 @@ class TodoApp:
     def load_tasks(self, category_id):
         """Load tasks for a specific category"""
         self.tasks = list(tasks_collection.find(
-            {'category_id': category_id}).sort('created_at', 1))
+            {'category_id': category_id}).sort('created_at', -1))
 
     def add_category(self, name):
         """Add a new category"""
@@ -364,7 +370,10 @@ class TodoApp:
                 'completed': False,
                 'created_at': datetime.now()
             }
-            tasks_collection.insert_one(task)
+            result = tasks_collection.insert_one(task)
+            # Track new task for pulse effect
+            self.new_task_id = result.inserted_id
+            self.new_task_start_time = pygame.time.get_ticks()
             self.load_tasks(category_id)
 
     def update_task(self, task_id, new_name):
@@ -643,13 +652,43 @@ class TodoApp:
             is_hovered = card_rect.collidepoint(mouse_pos) and not delete_btn_rect.collidepoint(
                 mouse_pos) and not edit_btn_rect.collidepoint(mouse_pos)
 
+            # Check if this is a new task with pulse effect
+            is_new_task = False
+            pulse_alpha = 255
+            if self.new_task_id and task['_id'] == self.new_task_id:
+                elapsed = pygame.time.get_ticks() - self.new_task_start_time
+                if elapsed < self.new_task_pulse_duration:
+                    is_new_task = True
+                    # Create pulse effect: fade in and out
+                    progress = elapsed / self.new_task_pulse_duration
+                    # Use sine wave for smooth pulse
+                    pulse_alpha = int(155 + 100 * abs(math.sin(progress * math.pi * 4)))
+                else:
+                    # Pulse finished, clear the new task marker
+                    if self.new_task_id == task['_id']:
+                        self.new_task_id = None
+
             # Draw card with pixel box
             if task['completed']:
                 card_color = (200, 240, 200) if is_hovered else (180, 230, 180)
             else:
                 card_color = (255, 255, 200) if is_hovered else WHITE_COLOR
-
-            PixelBox.draw(self.screen, card_rect, card_color, 4)
+            
+            # Apply pulse effect for new tasks
+            if is_new_task:
+                # Draw normal card first
+                PixelBox.draw(self.screen, card_rect, card_color, 4)
+                
+                # Create yellow overlay with pulsing alpha
+                yellow_overlay = pygame.Surface((card_rect.width, card_rect.height))
+                yellow_overlay.fill(ACCENT_COLOR)  # Pokemon yellow
+                yellow_overlay.set_alpha(pulse_alpha - 155)  # Range from 0 to 100
+                self.screen.blit(yellow_overlay, card_rect)
+                
+                # Redraw border on top
+                pygame.draw.rect(self.screen, BORDER_COLOR, card_rect, 4)
+            else:
+                PixelBox.draw(self.screen, card_rect, card_color, 4)
 
             # Checkbox (thick pixel borders)
             checkbox_rect = pygame.Rect(
