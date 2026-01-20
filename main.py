@@ -299,6 +299,8 @@ class TodoApp:
         self.edit_input = InputBox(150, 300, 500, 50, '')
         # For confirmation mode: {'action': 'delete_category'/'delete_task'/'edit_category'/'edit_task'/'toggle_task', 'data': ...}
         self.confirming_action = None
+        # For viewing full task text
+        self.viewing_task = None
 
         # Scrolling
         self.category_scroll = 0
@@ -645,12 +647,14 @@ class TodoApp:
 
             # Check hover
             mouse_pos = pygame.mouse.get_pos()
+            view_btn_rect = pygame.Rect(
+                card_rect.right - 155, card_rect.y + 10, 45, 35)
             edit_btn_rect = pygame.Rect(
                 card_rect.right - 105, card_rect.y + 10, 45, 35)
             delete_btn_rect = pygame.Rect(
                 card_rect.right - 55, card_rect.y + 10, 45, 35)
             is_hovered = card_rect.collidepoint(mouse_pos) and not delete_btn_rect.collidepoint(
-                mouse_pos) and not edit_btn_rect.collidepoint(mouse_pos)
+                mouse_pos) and not edit_btn_rect.collidepoint(mouse_pos) and not view_btn_rect.collidepoint(mouse_pos)
 
             # Check if this is a new task with pulse effect
             is_new_task = False
@@ -721,6 +725,13 @@ class TodoApp:
 
             name_text = self.font.render(task_name, False, text_color)
             self.screen.blit(name_text, (card_rect.x + 60, card_rect.y + 18))
+
+            # View button (eye icon)
+            pygame.draw.rect(self.screen, (150, 120, 200), view_btn_rect)  # Purple color
+            pygame.draw.rect(self.screen, BORDER_COLOR, view_btn_rect, 3)
+            view_text = self.small_font.render('V', False, WHITE_COLOR)
+            view_text_rect = view_text.get_rect(center=view_btn_rect.center)
+            self.screen.blit(view_text, view_text_rect)
 
             # Edit button
             pygame.draw.rect(self.screen, BLUE_COLOR, edit_btn_rect)
@@ -834,10 +845,17 @@ class TodoApp:
             card_rect = pygame.Rect(80, y_offset, 640, 55)
             checkbox_rect = pygame.Rect(
                 card_rect.x + 15, card_rect.y + 15, 28, 28)
+            view_btn_rect = pygame.Rect(
+                card_rect.right - 155, card_rect.y + 10, 45, 35)
             edit_btn_rect = pygame.Rect(
                 card_rect.right - 105, card_rect.y + 10, 45, 35)
             delete_btn_rect = pygame.Rect(
                 card_rect.right - 55, card_rect.y + 10, 45, 35)
+
+            if view_btn_rect.collidepoint(pos):
+                # Show full task text
+                self.viewing_task = task
+                return
 
             if edit_btn_rect.collidepoint(pos):
                 # Show confirmation for editing
@@ -873,7 +891,7 @@ class TodoApp:
                     running = False
 
                 # Handle mouse wheel scrolling
-                if event.type == pygame.MOUSEWHEEL and not self.editing_item and not self.confirming_action:
+                if event.type == pygame.MOUSEWHEEL and not self.editing_item and not self.confirming_action and not self.viewing_task:
                     if self.current_view == 'categories':
                         max_scroll = max(
                             0, len(self.categories) - self.items_per_page)
@@ -888,6 +906,16 @@ class TodoApp:
                         max_scroll = max(0, filtered_task_count - self.items_per_page)
                         self.task_scroll = max(
                             0, min(max_scroll, self.task_scroll - event.y))
+
+                # Handle viewing mode
+                if self.viewing_task:
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        close_btn_rect = pygame.Rect(325, 390, 150, 45)
+                        if close_btn_rect.collidepoint(event.pos):
+                            self.viewing_task = None
+                    elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                        self.viewing_task = None
+                    continue
 
                 # Handle confirmation mode
                 if self.confirming_action:
@@ -960,26 +988,28 @@ class TodoApp:
                     continue
 
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    if self.current_view == 'categories':
-                        self.handle_categories_click(event.pos)
-                    else:
-                        self.handle_tasks_click(event.pos)
+                    if not self.viewing_task:
+                        if self.current_view == 'categories':
+                            self.handle_categories_click(event.pos)
+                        else:
+                            self.handle_tasks_click(event.pos)
 
                 # Handle input boxes - properly check for Enter key
-                if self.current_view == 'categories':
-                    if self.category_input.handle_event(event):
-                        # Enter was pressed
-                        text = self.category_input.get_text()
-                        if text.strip():
-                            self.add_category(text)
-                            self.category_input.clear()
-                else:
-                    if self.task_input.handle_event(event):
-                        # Enter was pressed
-                        text = self.task_input.get_text()
-                        if text.strip():
-                            self.add_task(self.selected_category_id, text)
-                            self.task_input.clear()
+                if not self.viewing_task:
+                    if self.current_view == 'categories':
+                        if self.category_input.handle_event(event):
+                            # Enter was pressed
+                            text = self.category_input.get_text()
+                            if text.strip():
+                                self.add_category(text)
+                                self.category_input.clear()
+                    else:
+                        if self.task_input.handle_event(event):
+                            # Enter was pressed
+                            text = self.task_input.get_text()
+                            if text.strip():
+                                self.add_task(self.selected_category_id, text)
+                                self.task_input.clear()
 
             # Update input boxes for cursor animation
             if self.editing_item:
@@ -1087,6 +1117,55 @@ class TodoApp:
                     'PRESS ENTER TO SAVE', False, (100, 100, 100))
                 hint_rect = hint.get_rect(center=(SCREEN_WIDTH // 2, 370))
                 self.screen.blit(hint, hint_rect)
+
+            # Draw viewing dialog if viewing a task
+            elif self.viewing_task:
+                # Dim background
+                overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+                overlay.set_alpha(128)
+                overlay.fill((0, 0, 0))
+                self.screen.blit(overlay, (0, 0))
+
+                # View dialog box
+                dialog_rect = pygame.Rect(100, 200, 600, 250)
+                PixelBox.draw(self.screen, dialog_rect, WHITE_COLOR, 6)
+
+                # Title
+                title = self.font.render('FULL TASK', False, TEXT_COLOR)
+                title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 230))
+                self.screen.blit(title, title_rect)
+
+                # Task text (word-wrapped)
+                task_text = self.viewing_task['name']
+                words = task_text.split(' ')
+                lines = []
+                current_line = ''
+                max_width = 550
+
+                for word in words:
+                    test_line = current_line + (' ' if current_line else '') + word
+                    test_surface = self.small_font.render(test_line, False, TEXT_COLOR)
+                    if test_surface.get_width() <= max_width:
+                        current_line = test_line
+                    else:
+                        if current_line:
+                            lines.append(current_line)
+                        current_line = word
+                if current_line:
+                    lines.append(current_line)
+
+                # Draw lines
+                y_pos = 270
+                for line in lines[:6]:  # Max 6 lines
+                    line_surface = self.small_font.render(line, False, TEXT_COLOR)
+                    line_rect = line_surface.get_rect(center=(SCREEN_WIDTH // 2, y_pos))
+                    self.screen.blit(line_surface, line_rect)
+                    y_pos += 20
+
+                # Close button
+                close_btn = Button(325, 390, 150, 45, 'CLOSE', RED_COLOR, WHITE_COLOR)
+                close_btn.check_hover(pygame.mouse.get_pos())
+                close_btn.draw(self.screen, self.small_font)
 
             pygame.display.flip()
             self.clock.tick(FPS)
