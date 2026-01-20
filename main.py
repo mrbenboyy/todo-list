@@ -264,7 +264,7 @@ class TodoApp:
 
         # Get base directory for resource loading
         base_dir = os.path.dirname(__file__)
-        
+
         # Set window icon
         try:
             icon_path = os.path.join(base_dir, 'sprites', 'logo.png')
@@ -279,7 +279,7 @@ class TodoApp:
             pikachu_path = os.path.join(base_dir, 'sprites', 'pikachu.png')
             pokeball_path = os.path.join(base_dir, 'sprites', 'pokeball.png')
             badge_path = os.path.join(base_dir, 'sprites', 'badge.png')
-            
+
             self.pikachu_sprite = pygame.image.load(pikachu_path)
             self.pokeball_sprite = pygame.image.load(pokeball_path)
             self.badge_sprite = pygame.image.load(badge_path)
@@ -411,10 +411,6 @@ class TodoApp:
 
     def draw_categories_view(self):
         """Draw the categories view"""
-        # Pikachu sprite in corner
-        if self.pikachu_sprite:
-            self.screen.blit(self.pikachu_sprite, (10, 540))
-
         # Title box with retro style
         title_box_rect = pygame.Rect(50, 20, 700, 100)
         PixelBox.draw(self.screen, title_box_rect, ACCENT_COLOR, 6)
@@ -437,17 +433,21 @@ class TodoApp:
             scrollbar_y = 155
             scrollbar_width = 10
             scrollbar_height = 315  # Total scrollable area height
-            
+
             # Scrollbar track
-            track_rect = pygame.Rect(scrollbar_x, scrollbar_y, scrollbar_width, scrollbar_height)
+            track_rect = pygame.Rect(
+                scrollbar_x, scrollbar_y, scrollbar_width, scrollbar_height)
             pygame.draw.rect(self.screen, SHADOW_COLOR, track_rect)
             pygame.draw.rect(self.screen, BORDER_COLOR, track_rect, 2)
-            
+
             # Scrollbar thumb
-            thumb_height = max(30, int(scrollbar_height * self.items_per_page / total_categories))
+            thumb_height = max(
+                30, int(scrollbar_height * self.items_per_page / total_categories))
             max_scroll = total_categories - self.items_per_page
-            thumb_y = scrollbar_y + int((scrollbar_height - thumb_height) * (self.category_scroll / max_scroll)) if max_scroll > 0 else scrollbar_y
-            thumb_rect = pygame.Rect(scrollbar_x, thumb_y, scrollbar_width, thumb_height)
+            thumb_y = scrollbar_y + int((scrollbar_height - thumb_height) * (
+                self.category_scroll / max_scroll)) if max_scroll > 0 else scrollbar_y
+            thumb_rect = pygame.Rect(
+                scrollbar_x, thumb_y, scrollbar_width, thumb_height)
             pygame.draw.rect(self.screen, BLUE_COLOR, thumb_rect)
             pygame.draw.rect(self.screen, BORDER_COLOR, thumb_rect, 2)
 
@@ -557,10 +557,6 @@ class TodoApp:
         # Back button
         self.back_button.draw(self.screen, self.small_font)
 
-        # Pikachu sprite in corner
-        if self.pikachu_sprite:
-            self.screen.blit(self.pikachu_sprite, (10, 540))
-
         # Title box with retro style
         title_box_rect = pygame.Rect(180, 20, 440, 100)
         PixelBox.draw(self.screen, title_box_rect, BLUE_COLOR, 6)
@@ -575,29 +571,33 @@ class TodoApp:
         filter_checkbox_rect = pygame.Rect(200, 130, 24, 24)
         pygame.draw.rect(self.screen, WHITE_COLOR, filter_checkbox_rect)
         pygame.draw.rect(self.screen, BORDER_COLOR, filter_checkbox_rect, 3)
-        
+
         # Draw checkmark if filter is active
         if self.show_only_undone:
             pygame.draw.line(self.screen, BLUE_COLOR,
-                             (filter_checkbox_rect.x + 4, filter_checkbox_rect.y + 12),
+                             (filter_checkbox_rect.x + 4,
+                              filter_checkbox_rect.y + 12),
                              (filter_checkbox_rect.x + 9, filter_checkbox_rect.y + 18), 4)
             pygame.draw.line(self.screen, BLUE_COLOR,
-                             (filter_checkbox_rect.x + 9, filter_checkbox_rect.y + 18),
+                             (filter_checkbox_rect.x + 9,
+                              filter_checkbox_rect.y + 18),
                              (filter_checkbox_rect.x + 20, filter_checkbox_rect.y + 4), 4)
-        
+
         # Filter label (centered vertically with checkbox)
-        filter_label = self.small_font.render('Show only undone', False, TEXT_COLOR)
+        filter_label = self.small_font.render(
+            'Show only undone', False, TEXT_COLOR)
         label_y = filter_checkbox_rect.centery - filter_label.get_height() // 2
         self.screen.blit(filter_label, (235, label_y))
 
         # Get filtered tasks
         if self.show_only_undone:
-            filtered_tasks = [task for task in self.tasks if not task['completed']]
+            filtered_tasks = [
+                task for task in self.tasks if not task['completed']]
         else:
             filtered_tasks = self.tasks
-        
+
         total_tasks = len(filtered_tasks)
-        
+
         # Subtitle with count
         subtitle_text = f'TASKS ({total_tasks})'
         subtitle = self.small_font.render(subtitle_text, False, WHITE_COLOR)
@@ -610,17 +610,21 @@ class TodoApp:
             scrollbar_y = 155
             scrollbar_width = 10
             scrollbar_height = 315  # Total scrollable area height
-            
+
             # Scrollbar track
-            track_rect = pygame.Rect(scrollbar_x, scrollbar_y, scrollbar_width, scrollbar_height)
+            track_rect = pygame.Rect(
+                scrollbar_x, scrollbar_y, scrollbar_width, scrollbar_height)
             pygame.draw.rect(self.screen, SHADOW_COLOR, track_rect)
             pygame.draw.rect(self.screen, BORDER_COLOR, track_rect, 2)
-            
+
             # Scrollbar thumb
-            thumb_height = max(30, int(scrollbar_height * self.items_per_page / total_tasks))
+            thumb_height = max(
+                30, int(scrollbar_height * self.items_per_page / total_tasks))
             max_scroll = total_tasks - self.items_per_page
-            thumb_y = scrollbar_y + int((scrollbar_height - thumb_height) * (self.task_scroll / max_scroll)) if max_scroll > 0 else scrollbar_y
-            thumb_rect = pygame.Rect(scrollbar_x, thumb_y, scrollbar_width, thumb_height)
+            thumb_y = scrollbar_y + int((scrollbar_height - thumb_height) * (
+                self.task_scroll / max_scroll)) if max_scroll > 0 else scrollbar_y
+            thumb_rect = pygame.Rect(
+                scrollbar_x, thumb_y, scrollbar_width, thumb_height)
             pygame.draw.rect(self.screen, BLUE_COLOR, thumb_rect)
             pygame.draw.rect(self.screen, BORDER_COLOR, thumb_rect, 2)
 
@@ -666,7 +670,8 @@ class TodoApp:
                     # Create pulse effect: fade in and out
                     progress = elapsed / self.new_task_pulse_duration
                     # Use sine wave for smooth pulse
-                    pulse_alpha = int(155 + 100 * abs(math.sin(progress * math.pi * 4)))
+                    pulse_alpha = int(
+                        155 + 100 * abs(math.sin(progress * math.pi * 4)))
                 else:
                     # Pulse finished, clear the new task marker
                     if self.new_task_id == task['_id']:
@@ -677,18 +682,20 @@ class TodoApp:
                 card_color = (200, 240, 200) if is_hovered else (180, 230, 180)
             else:
                 card_color = (255, 255, 200) if is_hovered else WHITE_COLOR
-            
+
             # Apply pulse effect for new tasks
             if is_new_task:
                 # Draw normal card first
                 PixelBox.draw(self.screen, card_rect, card_color, 4)
-                
+
                 # Create yellow overlay with pulsing alpha
-                yellow_overlay = pygame.Surface((card_rect.width, card_rect.height))
+                yellow_overlay = pygame.Surface(
+                    (card_rect.width, card_rect.height))
                 yellow_overlay.fill(ACCENT_COLOR)  # Pokemon yellow
-                yellow_overlay.set_alpha(pulse_alpha - 155)  # Range from 0 to 100
+                yellow_overlay.set_alpha(
+                    pulse_alpha - 155)  # Range from 0 to 100
                 self.screen.blit(yellow_overlay, card_rect)
-                
+
                 # Redraw border on top
                 pygame.draw.rect(self.screen, BORDER_COLOR, card_rect, 4)
             else:
@@ -727,7 +734,8 @@ class TodoApp:
             self.screen.blit(name_text, (card_rect.x + 60, card_rect.y + 18))
 
             # View button (eye icon)
-            pygame.draw.rect(self.screen, (150, 120, 200), view_btn_rect)  # Purple color
+            pygame.draw.rect(self.screen, (150, 120, 200),
+                             view_btn_rect)  # Purple color
             pygame.draw.rect(self.screen, BORDER_COLOR, view_btn_rect, 3)
             view_text = self.small_font.render('V', False, WHITE_COLOR)
             view_text_rect = view_text.get_rect(center=view_btn_rect.center)
@@ -831,7 +839,8 @@ class TodoApp:
 
         # Get filtered tasks for click detection
         if self.show_only_undone:
-            filtered_tasks = [task for task in self.tasks if not task['completed']]
+            filtered_tasks = [
+                task for task in self.tasks if not task['completed']]
         else:
             filtered_tasks = self.tasks
 
@@ -900,10 +909,12 @@ class TodoApp:
                     else:
                         # Get filtered task count for scrolling
                         if self.show_only_undone:
-                            filtered_task_count = len([task for task in self.tasks if not task['completed']])
+                            filtered_task_count = len(
+                                [task for task in self.tasks if not task['completed']])
                         else:
                             filtered_task_count = len(self.tasks)
-                        max_scroll = max(0, filtered_task_count - self.items_per_page)
+                        max_scroll = max(
+                            0, filtered_task_count - self.items_per_page)
                         self.task_scroll = max(
                             0, min(max_scroll, self.task_scroll - event.y))
 
@@ -1143,8 +1154,10 @@ class TodoApp:
                 max_width = 550
 
                 for word in words:
-                    test_line = current_line + (' ' if current_line else '') + word
-                    test_surface = self.small_font.render(test_line, False, TEXT_COLOR)
+                    test_line = current_line + \
+                        (' ' if current_line else '') + word
+                    test_surface = self.small_font.render(
+                        test_line, False, TEXT_COLOR)
                     if test_surface.get_width() <= max_width:
                         current_line = test_line
                     else:
@@ -1157,13 +1170,16 @@ class TodoApp:
                 # Draw lines
                 y_pos = 270
                 for line in lines[:6]:  # Max 6 lines
-                    line_surface = self.small_font.render(line, False, TEXT_COLOR)
-                    line_rect = line_surface.get_rect(center=(SCREEN_WIDTH // 2, y_pos))
+                    line_surface = self.small_font.render(
+                        line, False, TEXT_COLOR)
+                    line_rect = line_surface.get_rect(
+                        center=(SCREEN_WIDTH // 2, y_pos))
                     self.screen.blit(line_surface, line_rect)
                     y_pos += 20
 
                 # Close button
-                close_btn = Button(325, 390, 150, 45, 'CLOSE', RED_COLOR, WHITE_COLOR)
+                close_btn = Button(325, 390, 150, 45, 'CLOSE',
+                                   RED_COLOR, WHITE_COLOR)
                 close_btn.check_hover(pygame.mouse.get_pos())
                 close_btn.draw(self.screen, self.small_font)
 
