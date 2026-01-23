@@ -127,14 +127,41 @@ class InputBox:
         self.scroll_offset = 0
         self.cursor_position = 0  # Cursor position in text
 
+        # For key repeat functionality
+        self.key_repeat_timer = 0
+        self.key_repeat_delay = 20  # Frames before repeat starts
+        self.key_repeat_interval = 3  # Frames between repeats
+        self.current_key = None
+        self.font = None  # Will be set when drawing
+
     def handle_event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN:
             self.active = self.rect.collidepoint(event.pos)
             if self.active:
-                # Reset cursor to end when clicking
-                self.cursor_position = len(self.text)
+                # Calculate cursor position based on click location
+                if self.font and self.text:
+                    click_x = event.pos[0] - \
+                        (self.rect.x + 12) + self.scroll_offset
+                    # Find the closest character position
+                    best_pos = len(self.text)
+                    best_diff = float('inf')
+                    for i in range(len(self.text) + 1):
+                        text_width = self.font.render(
+                            self.text[:i], False, TEXT_COLOR).get_width()
+                        diff = abs(text_width - click_x)
+                        if diff < best_diff:
+                            best_diff = diff
+                            best_pos = i
+                    self.cursor_position = best_pos
+                else:
+                    self.cursor_position = len(self.text)
 
         if event.type == pygame.KEYDOWN and self.active:
+            # Store the current key for repeat functionality
+            if event.key in (pygame.K_LEFT, pygame.K_RIGHT, pygame.K_BACKSPACE, pygame.K_DELETE):
+                self.current_key = event.key
+                self.key_repeat_timer = 0
+
             if event.key == pygame.K_BACKSPACE:
                 if self.cursor_position > 0:
                     self.text = self.text[:self.cursor_position -
@@ -161,6 +188,13 @@ class InputBox:
                     self.text = self.text[:self.cursor_position] + \
                         event.unicode + self.text[self.cursor_position:]
                     self.cursor_position += 1
+
+        # Reset key repeat when key is released
+        if event.type == pygame.KEYUP and self.active:
+            if event.key == self.current_key:
+                self.current_key = None
+                self.key_repeat_timer = 0
+
         return False
 
     def update(self):
@@ -170,7 +204,33 @@ class InputBox:
             self.cursor_visible = not self.cursor_visible
             self.cursor_timer = 0
 
+        # Handle key repeat for navigation keys
+        if self.active and self.current_key:
+            self.key_repeat_timer += 1
+
+            # After initial delay, repeat the key action
+            if self.key_repeat_timer > self.key_repeat_delay:
+                if (self.key_repeat_timer - self.key_repeat_delay) % self.key_repeat_interval == 0:
+                    # Perform the key action
+                    if self.current_key == pygame.K_LEFT:
+                        self.cursor_position = max(0, self.cursor_position - 1)
+                    elif self.current_key == pygame.K_RIGHT:
+                        self.cursor_position = min(
+                            len(self.text), self.cursor_position + 1)
+                    elif self.current_key == pygame.K_BACKSPACE:
+                        if self.cursor_position > 0:
+                            self.text = self.text[:self.cursor_position -
+                                                  1] + self.text[self.cursor_position:]
+                            self.cursor_position -= 1
+                    elif self.current_key == pygame.K_DELETE:
+                        if self.cursor_position < len(self.text):
+                            self.text = self.text[:self.cursor_position] + \
+                                self.text[self.cursor_position + 1:]
+
     def draw(self, screen, font):
+        # Store font for cursor positioning on click
+        self.font = font
+
         # Draw input box with pixel style
         if self.active:
             pygame.draw.rect(screen, ACCENT_COLOR, self.rect)
