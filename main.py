@@ -978,6 +978,34 @@ class TodoApp:
                         self.task_scroll = max(
                             0, min(max_scroll, self.task_scroll - event.y))
 
+                # Handle arrow key scrolling (UP/DOWN)
+                if event.type == pygame.KEYDOWN and not self.editing_item and not self.confirming_action and not self.viewing_task:
+                    # Only allow scrolling when not typing in input boxes
+                    if not (self.category_input.active or self.task_input.active):
+                        if event.key == pygame.K_DOWN:
+                            if self.current_view == 'categories':
+                                max_scroll = max(
+                                    0, len(self.categories) - self.items_per_page)
+                                self.category_scroll = min(
+                                    max_scroll, self.category_scroll + 1)
+                            else:
+                                # Get filtered task count for scrolling
+                                if self.show_only_undone:
+                                    filtered_task_count = len(
+                                        [task for task in self.tasks if not task['completed']])
+                                else:
+                                    filtered_task_count = len(self.tasks)
+                                max_scroll = max(
+                                    0, filtered_task_count - self.items_per_page)
+                                self.task_scroll = min(
+                                    max_scroll, self.task_scroll + 1)
+                        elif event.key == pygame.K_UP:
+                            if self.current_view == 'categories':
+                                self.category_scroll = max(
+                                    0, self.category_scroll - 1)
+                            else:
+                                self.task_scroll = max(0, self.task_scroll - 1)
+
                 # Handle viewing mode
                 if self.viewing_task:
                     if event.type == pygame.MOUSEBUTTONDOWN:
