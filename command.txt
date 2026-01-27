@@ -1,0 +1,1 @@
+C:/Users/mrben/Desktop/todo-list/.venv/Scripts/pyinstaller.exe --onefile --windowed --name="PokemonTodo" --add-data="PressStart2P-Regular.ttf;." --add-data="sprites;sprites" --noconsole main.py

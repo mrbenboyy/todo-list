@@ -9,6 +9,13 @@ import math
 from pymongo import MongoClient
 from datetime import datetime
 
+try:
+    import pyperclip
+    CLIPBOARD_AVAILABLE = True
+except ImportError:
+    CLIPBOARD_AVAILABLE = False
+    print("Warning: pyperclip not installed, clipboard functionality disabled")
+
 # Initialize Pygame
 pygame.init()
 
@@ -116,14 +123,13 @@ class PixelBox:
 class InputBox:
     """Pixelated input box for text entry"""
 
-    def __init__(self, x, y, width, height, placeholder='', max_length=150):
+    def __init__(self, x, y, width, height, placeholder=''):
         self.rect = pygame.Rect(x, y, width, height)
         self.text = ''
         self.placeholder = placeholder
         self.active = False
         self.cursor_visible = True
         self.cursor_timer = 0
-        self.max_length = max_length
         self.scroll_offset = 0
         self.cursor_position = 0  # Cursor position in text
 
@@ -162,7 +168,27 @@ class InputBox:
                 self.current_key = event.key
                 self.key_repeat_timer = 0
 
-            if event.key == pygame.K_BACKSPACE:
+            # Handle Ctrl+C (copy)
+            if event.key == pygame.K_c and (event.mod & pygame.KMOD_CTRL):
+                if CLIPBOARD_AVAILABLE and self.text:
+                    try:
+                        pyperclip.copy(self.text)
+                    except:
+                        pass
+            # Handle Ctrl+V (paste)
+            elif event.key == pygame.K_v and (event.mod & pygame.KMOD_CTRL):
+                if CLIPBOARD_AVAILABLE:
+                    try:
+                        clipboard_text = pyperclip.paste()
+                        if clipboard_text:
+                            # Filter out non-printable characters
+                            clipboard_text = ''.join(c for c in clipboard_text if c.isprintable())
+                            
+                            self.text = self.text[:self.cursor_position] + clipboard_text + self.text[self.cursor_position:]
+                            self.cursor_position += len(clipboard_text)
+                    except Exception as e:
+                        print(f"Paste error: {e}")
+            elif event.key == pygame.K_BACKSPACE:
                 if self.cursor_position > 0:
                     self.text = self.text[:self.cursor_position -
                                           1] + self.text[self.cursor_position:]
@@ -184,7 +210,7 @@ class InputBox:
                 return True
             else:
                 # Insert character at cursor position
-                if len(self.text) < self.max_length and len(event.unicode) > 0 and event.unicode.isprintable():
+                if len(event.unicode) > 0 and event.unicode.isprintable():
                     self.text = self.text[:self.cursor_position] + \
                         event.unicode + self.text[self.cursor_position:]
                     self.cursor_position += 1
